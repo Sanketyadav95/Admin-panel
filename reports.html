@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Reports</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>Admin Panel</h3>
+        <p>Welcome, <span id="adminName">Admin</span></p>
+      </div>
+      
+      <div class="sidebar-menu">
+        <ul>
+          <li>
+            <a href="dashboard.html">
+              <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="payments.html">
+              <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+          </li>
+          <li>
+            <a href="users.html">
+              <i class="fas fa-users"></i> Manage Users
+            </a>
+          </li>
+          <li>
+            <a href="reports.html" class="active">
+              <i class="fas fa-chart-bar"></i> Reports
+            </a>
+          </li>
+          <li>
+            <a href="requests.html">
+              <i class="fas fa-trash-alt"></i> Delete Requests
+            </a>
+          </li>
+          <li>
+            <a href="settings.html">
+              <i class="fas fa-cog"></i> Settings
+            </a>
+          </li>
+          <li>
+            <a href="#" id="logoutBtn">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <button class="toggle-sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2>Reports & Analytics</h2>
+        <div class="user-profile">
+          <img src="assets/logo.svg" alt="Admin">
+          <span id="adminEmail">admin@example.com</span>
+        </div>
+      </div>
+      
+      <!-- Filter Options -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Report Filters</h3>
+        </div>
+        <div class="card-body" style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <div class="form-group" style="min-width: 200px;">
+            <label for="reportDateRange" class="form-label">Date Range</label>
+            <select id="reportDateRange" class="form-control">
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+          
+          <div id="customDateRange" style="display: none; flex: 1; min-width: 300px;">
+            <div style="display: flex; gap: 10px;">
+              <div class="form-group" style="flex: 1;">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input type="date" id="startDate" class="form-control">
+              </div>
+              
+              <div class="form-group" style="flex: 1;">
+                <label for="endDate" class="form-label">End Date</label>
+                <input type="date" id="endDate" class="form-control">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group" style="align-self: flex-end;">
+            <button id="generateReportBtn" class="btn btn-primary">
+              <i class="fas fa-sync"></i> Generate Report
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Export Options -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Export Options</h3>
+        </div>
+        <div class="card-body" style="display: flex; gap: 15px;">
+          <button id="exportCSV" class="btn btn-success">
+            <i class="fas fa-file-csv"></i> Export CSV
+          </button>
+          
+          <button id="exportPDF" class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Export PDF
+          </button>
+          
+          <button id="printReport" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print Report
+          </button>
+        </div>
+      </div>
+      
+      <!-- Charts Row -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+        <!-- Payments by Role Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Payments by Role</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="roleChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Monthly Payment Trend Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Monthly Payment Trend</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Summary Stats -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h3 class="card-title">Payment Summary</h3>
+        </div>
+        <div class="card-body">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div class="stat-card">
+              <h4>Total Amount</h4>
+              <h3 id="totalAmount">₹0</h3>
+            </div>
+            
+            <div class="stat-card">
+              <h4>Average Payment</h4>
+              <h3 id="avgPayment">₹0</h3>
+            </div>
+            
+            <div class="stat-card">
+              <h4>Highest Payment</h4>
+              <h3 id="maxPayment">₹0</h3>
+            </div>
+            
+            <div class="stat-card">
+              <h4>Total Transactions</h4>
+              <h3 id="totalTransactions">0</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Detailed Report Table -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h3 class="card-title">Detailed Report</h3>
+        </div>
+        <div class="table-responsive">
+          <table id="reportTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Payment ID</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Report data will be populated by JavaScript -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="4" style="text-align: right;">Total:</th>
+                <th id="tableTotalAmount">₹0</th>
+                <th></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    // Toggle custom date range based on selection
+    document.getElementById('reportDateRange').addEventListener('change', function() {
+      const customDateRange = document.getElementById('customDateRange');
+      if (this.value === 'custom') {
+        customDateRange.style.display = 'block';
+      } else {
+        customDateRange.style.display = 'none';
+      }
+    });
+    
+    // Logout functionality
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminEmail');
+      window.location.href = 'index.html';
+    });
+    
+    // Check if user is logged in
+    window.addEventListener('load', function() {
+      if (localStorage.getItem('adminLoggedIn') !== 'true') {
+        window.location.href = 'index.html';
+      } else {
+        // Display admin email
+        const adminEmail = localStorage.getItem('adminEmail');
+        if (adminEmail) {
+          document.getElementById('adminEmail').textContent = adminEmail;
+        }
+      }
+    });
+    
+    // Toggle sidebar on mobile
+    document.querySelector('.toggle-sidebar').addEventListener('click', function() {
+      document.querySelector('.sidebar').classList.toggle('active');
+      document.querySelector('.main-content').classList.toggle('pushed');
+    });
+  </script>
+  <script src="js/reports.js"></script>
+</body>
+</html>

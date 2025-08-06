@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>Admin Panel</h2>
+        <p>Enter your credentials to login</p>
+      </div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email" class="form-label">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+            <i id="togglePassword" class="fas fa-eye" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;"></i>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="role" class="form-label">Role</label>
+          <select id="role" class="form-control" disabled>
+            <option value="admin" selected>Admin</option>
+          </select>
+          <small class="text-secondary">Role is fixed to Admin for now</small>
+        </div>
+        
+        <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <input type="checkbox" id="rememberMe">
+            <label for="rememberMe">Remember me</label>
+          </div>
+          <a href="#" id="forgotPassword" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">Forgot Password?</a>
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" id="loginButton" class="btn btn-primary" style="width: 100%;">Login</button>
+        </div>
+      </form>
+      
+      <div id="loginAlert" class="alert alert-danger" style="display: none;">
+        Invalid email or password. Please try again.
+      </div>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div id="forgotPasswordModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Reset Password</h3>
+        <span class="close" id="closeForgotPasswordModal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>Enter your email address to receive a password reset link.</p>
+        <form id="forgotPasswordForm">
+          <div class="form-group">
+            <label for="resetEmail">Email</label>
+            <input type="email" id="resetEmail" class="form-control" placeholder="Enter your email" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
+        </form>
+        <div id="resetAlert" class="alert alert-success" style="display: none; margin-top: 15px;">
+          Password reset instructions have been sent to your email.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+      const passwordInput = document.getElementById('password');
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      this.classList.toggle('fa-eye');
+      this.classList.toggle('fa-eye-slash');
+    });
+    
+    // Forgot password functionality
+    document.getElementById('forgotPassword').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('forgotPasswordModal').style.display = 'block';
+    });
+    
+    document.getElementById('closeForgotPasswordModal').addEventListener('click', function() {
+      document.getElementById('forgotPasswordModal').style.display = 'none';
+    });
+    
+    window.addEventListener('click', function(e) {
+      const modal = document.getElementById('forgotPasswordModal');
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    document.getElementById('forgotPasswordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('resetEmail').value;
+      
+      // In a real application, this would send a request to the server
+      // For demo purposes, we'll just show a success message
+      document.getElementById('resetAlert').style.display = 'block';
+      
+      // Hide the alert after 5 seconds
+      setTimeout(function() {
+        document.getElementById('resetAlert').style.display = 'none';
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+      }, 5000);
+    });
+    
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const loginButton = document.getElementById('loginButton');
+      loginButton.innerHTML = '<span class="loading-spinner"></span><span>Logging in...</span>';
+      loginButton.disabled = true;
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+      
+      // Simulate server request delay
+      setTimeout(function() {
+        // Simple validation (in a real app, this would be server-side)
+        if (email === 'admin@example.com' && password === 'admin123') {
+          // Store login state in localStorage
+          localStorage.setItem('adminLoggedIn', 'true');
+          localStorage.setItem('adminEmail', email);
+          
+          // If remember me is checked, set a longer expiration
+          if (rememberMe) {
+            // In a real app, you would use a secure HTTP-only cookie with proper expiration
+            // For demo purposes, we'll just store a flag in localStorage
+            localStorage.setItem('adminRememberMe', 'true');
+          }
+          
+          // Redirect to dashboard
+          window.location.href = 'dashboard.html';
+        } else {
+          // Show error message
+          document.getElementById('loginAlert').style.display = 'block';
+          
+          // Reset button
+          loginButton.innerHTML = 'Login';
+          loginButton.disabled = false;
+          
+          // Hide error message after 3 seconds
+          setTimeout(function() {
+            document.getElementById('loginAlert').style.display = 'none';
+          }, 3000);
+        }
+      }, 1000); // Simulate 1 second delay
+    });
+    
+    // Check if user is already logged in
+    window.addEventListener('load', function() {
+      if (localStorage.getItem('adminLoggedIn') === 'true') {
+        window.location.href = 'dashboard.html';
+      }
+      
+      // If remember me was checked, pre-fill the email
+      if (localStorage.getItem('adminRememberMe') === 'true' && localStorage.getItem('adminEmail')) {
+        document.getElementById('email').value = localStorage.getItem('adminEmail');
+        document.getElementById('rememberMe').checked = true;
+      }
+    });
+  </script>
+</body>
+</html>

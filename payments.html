@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Payments</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>Admin Panel</h3>
+        <p>Welcome, <span id="adminName">Admin</span></p>
+      </div>
+      
+      <div class="sidebar-menu">
+        <ul>
+          <li>
+            <a href="dashboard.html">
+              <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="payments.html" class="active">
+              <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+          </li>
+          <li>
+            <a href="users.html">
+              <i class="fas fa-users"></i> Manage Users
+            </a>
+          </li>
+          <li>
+            <a href="reports.html">
+              <i class="fas fa-chart-bar"></i> Reports
+            </a>
+          </li>
+          <li>
+            <a href="requests.html">
+              <i class="fas fa-trash-alt"></i> Delete Requests
+            </a>
+          </li>
+          <li>
+            <a href="settings.html">
+              <i class="fas fa-cog"></i> Settings
+            </a>
+          </li>
+          <li>
+            <a href="#" id="logoutBtn">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <button class="toggle-sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2>Payment History</h2>
+        <div class="user-profile">
+          <img src="assets/logo.svg" alt="Admin">
+          <span id="adminEmail">admin@example.com</span>
+        </div>
+      </div>
+      
+      <!-- Filter Options -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Filter Payments</h3>
+        </div>
+        <div class="card-body" style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <div class="form-group" style="min-width: 200px;">
+            <label for="dateFilter" class="form-label">Date Range</label>
+            <select id="dateFilter" class="form-control">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <div class="form-group" style="min-width: 200px;">
+            <label for="roleFilter" class="form-label">User Role</label>
+            <select id="roleFilter" class="form-control">
+              <option value="all">All Roles</option>
+              <option value="user">User</option>
+              <option value="senior">Senior</option>
+              <option value="leader">Leader</option>
+            </select>
+          </div>
+          
+          <div class="form-group" style="min-width: 200px;">
+            <label for="statusFilter" class="form-label">Status</label>
+            <select id="statusFilter" class="form-control">
+              <option value="all">All Status</option>
+              <option value="success">Success</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Payments Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">All Payments</h3>
+        </div>
+        <div class="table-responsive">
+          <table id="paymentsTable" class="display" style="width:100%">
+            <thead>
+              <tr>
+                <th>Payment ID</th>
+                <th>Razorpay ID</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Payment data will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Detail Modal -->
+  <div id="paymentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1001;">
+    <div style="position: relative; width: 90%; max-width: 600px; margin: 50px auto; background-color: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.2);">
+      <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+      
+      <h3 class="mb-3">Payment Details</h3>
+      
+      <div id="paymentDetails">
+        <!-- Payment details will be populated by JavaScript -->
+      </div>
+      
+      <div class="mt-4 text-right">
+        <button id="printPayment" class="btn btn-primary">
+          <i class="fas fa-print"></i> Print
+        </button>
+        <button id="requestDelete" class="btn btn-danger">
+          <i class="fas fa-trash"></i> Request Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="js/payments.js"></script>
+</body>
+</html>

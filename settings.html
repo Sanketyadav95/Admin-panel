@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Settings</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>Admin Panel</h3>
+        <p>Welcome, <span id="adminName">Admin</span></p>
+      </div>
+      
+      <div class="sidebar-menu">
+        <ul>
+          <li>
+            <a href="dashboard.html">
+              <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="payments.html">
+              <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+          </li>
+          <li>
+            <a href="users.html">
+              <i class="fas fa-users"></i> Manage Users
+            </a>
+          </li>
+          <li>
+            <a href="reports.html">
+              <i class="fas fa-chart-bar"></i> Reports
+            </a>
+          </li>
+          <li>
+            <a href="requests.html">
+              <i class="fas fa-trash-alt"></i> Delete Requests
+            </a>
+          </li>
+          <li>
+            <a href="settings.html" class="active">
+              <i class="fas fa-cog"></i> Settings
+            </a>
+          </li>
+          <li>
+            <a href="#" id="logoutBtn">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <button class="toggle-sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2>Settings</h2>
+        <div class="user-profile">
+          <img src="assets/logo.svg" alt="Admin" id="profileImagePreview">
+          <span id="adminEmail">admin@example.com</span>
+        </div>
+      </div>
+      
+      <!-- Profile Settings -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Profile Settings</h3>
+        </div>
+        <div class="card-body">
+          <form id="profileForm">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 300px;">
+                <div class="form-group">
+                  <label for="adminFullName" class="form-label">Full Name</label>
+                  <input type="text" id="adminFullName" class="form-control" value="Admin User">
+                </div>
+                
+                <div class="form-group">
+                  <label for="adminEmailInput" class="form-label">Email Address</label>
+                  <input type="email" id="adminEmailInput" class="form-control" value="admin@example.com">
+                </div>
+                
+                <div class="form-group">
+                  <label for="adminPhone" class="form-label">Phone Number</label>
+                  <input type="tel" id="adminPhone" class="form-control" value="">
+                </div>
+              </div>
+              
+              <div style="flex: 1; min-width: 300px;">
+                <div class="form-group">
+                  <label class="form-label">Profile Picture</label>
+                  <div style="text-align: center; margin-bottom: 15px;">
+                    <img src="https://via.placeholder.com/150" alt="Profile" id="profileImage" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
+                  </div>
+                  <input type="file" id="profileImageInput" class="form-control" accept="image/*">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group text-right">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Security Settings -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Security Settings</h3>
+        </div>
+        <div class="card-body">
+          <form id="passwordForm">
+            <div class="form-group">
+              <label for="currentPassword" class="form-label">Current Password</label>
+              <input type="password" id="currentPassword" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="newPassword" class="form-label">New Password</label>
+              <input type="password" id="newPassword" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="confirmPassword" class="form-label">Confirm New Password</label>
+              <input type="password" id="confirmPassword" class="form-control" required>
+            </div>
+            
+            <div class="form-group text-right">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-key"></i> Change Password
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Notification Settings -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Notification Settings</h3>
+        </div>
+        <div class="card-body">
+          <form id="notificationForm">
+            <div class="form-group">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <input type="checkbox" id="emailNotifications" checked style="margin-right: 10px;">
+                <label for="emailNotifications">Email Notifications</label>
+              </div>
+              <p class="text-secondary">Receive email notifications for new payment requests, user registrations, and system alerts.</p>
+            </div>
+            
+            <div class="form-group">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <input type="checkbox" id="paymentAlerts" checked style="margin-right: 10px;">
+                <label for="paymentAlerts">Payment Alerts</label>
+              </div>
+              <p class="text-secondary">Receive notifications for new payments and payment status changes.</p>
+            </div>
+            
+            <div class="form-group">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <input type="checkbox" id="deleteRequestAlerts" checked style="margin-right: 10px;">
+                <label for="deleteRequestAlerts">Delete Request Alerts</label>
+              </div>
+              <p class="text-secondary">Receive notifications for new delete requests that require your approval.</p>
+            </div>
+            
+            <div class="form-group text-right">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Notification Settings
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Alert -->
+  <div id="successAlert" style="display: none; position: fixed; top: 20px; right: 20px; background-color: rgba(40, 167, 69, 0.9); color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1002;">
+    <i class="fas fa-check-circle"></i> <span id="alertMessage">Settings saved successfully!</span>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Profile image preview
+    document.getElementById('profileImageInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          document.getElementById('profileImage').src = event.target.result;
+          document.getElementById('profileImagePreview').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    // Profile form submission
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // In a real app, this would send data to the server
+      // For now, just update the displayed name and show success message
+      const fullName = document.getElementById('adminFullName').value;
+      const email = document.getElementById('adminEmailInput').value;
+      
+      // Update displayed email
+      document.getElementById('adminEmail').textContent = email;
+      
+      // Store in localStorage
+      localStorage.setItem('adminEmail', email);
+      localStorage.setItem('adminName', fullName);
+      
+      // Show success message
+      showAlert('Profile updated successfully!');
+    });
+    
+    // Password form submission
+    document.getElementById('passwordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      // Simple validation
+      if (currentPassword !== 'admin123') {
+        alert('Current password is incorrect!');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return;
+      }
+      
+      // In a real app, this would update the password on the server
+      // For now, just show success message
+      showAlert('Password changed successfully!');
+      
+      // Reset form
+      document.getElementById('passwordForm').reset();
+    });
+    
+    // Notification form submission
+    document.getElementById('notificationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // In a real app, this would save notification preferences to the server
+      // For now, just show success message
+      showAlert('Notification settings saved!');
+    });
+    
+    // Show success alert
+    function showAlert(message) {
+      const alert = document.getElementById('successAlert');
+      document.getElementById('alertMessage').textContent = message;
+      alert.style.display = 'block';
+      
+      // Hide alert after 3 seconds
+      setTimeout(function() {
+        alert.style.display = 'none';
+      }, 3000);
+    }
+    
+    // Logout functionality
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminEmail');
+      window.location.href = 'index.html';
+    });
+    
+    // Check if user is logged in
+    window.addEventListener('load', function() {
+      if (localStorage.getItem('adminLoggedIn') !== 'true') {
+        window.location.href = 'index.html';
+      } else {
+        // Display admin email
+        const adminEmail = localStorage.getItem('adminEmail');
+        if (adminEmail) {
+          document.getElementById('adminEmail').textContent = adminEmail;
+          document.getElementById('adminEmailInput').value = adminEmail;
+        }
+        
+        // Display admin name if available
+        const adminName = localStorage.getItem('adminName');
+        if (adminName) {
+          document.getElementById('adminFullName').value = adminName;
+        }
+      }
+    });
+    
+    // Toggle sidebar on mobile
+    document.querySelector('.toggle-sidebar').addEventListener('click', function() {
+      document.querySelector('.sidebar').classList.toggle('active');
+      document.querySelector('.main-content').classList.toggle('pushed');
+    });
+  </script>
+</body>
+</html>
