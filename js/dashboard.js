@@ -263,15 +263,57 @@ function setupEventListeners() {
   });
 }
 
+// Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+  initDashboard();
+  
+  // Toggle sidebar functionality
   const toggleSidebar = document.querySelector('.toggle-sidebar');
   const sidebar = document.querySelector('.sidebar');
   
-  toggleSidebar.addEventListener('click', function() {
-    sidebar.classList.toggle('active');
-  });
+  if (toggleSidebar && sidebar) {
+    toggleSidebar.addEventListener('click', function() {
+      sidebar.classList.toggle('active');
+    });
+  }
+  
+  // Mobile menu functionality
+  const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+  const mobileCloseBtn = document.querySelector('.mobile-close-btn');
+  const mobileSidebar = document.querySelector('.mobile-sidebar');
+  const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+  
+  // Show mobile sidebar when menu button is clicked
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', function() {
+      mobileSidebar.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent scrolling when menu is open
+    });
+  }
+  
+  // Hide mobile sidebar when close button is clicked
+  if (mobileCloseBtn) {
+    mobileCloseBtn.addEventListener('click', function() {
+      mobileSidebar.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
+    });
+  }
+  
+  // Mobile logout functionality
+  if (mobileLogoutBtn) {
+    mobileLogoutBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('adminEmail');
+      window.location.href = 'index.html';
+    });
+  }
+  
+  // Sync admin name between desktop and mobile
+  const adminName = localStorage.getItem('adminName') || 'Admin';
+  const mobileAdminNameEl = document.getElementById('mobileAdminName');
+  if (mobileAdminNameEl) {
+    mobileAdminNameEl.textContent = adminName;
+  }
 });
-
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', initDashboard);
 

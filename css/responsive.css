@@ -1,0 +1,386 @@
+/* Responsive styles for Admin Panel */
+
+/* Base responsive variables */
+:root {
+  --mobile-sidebar-width: 250px;
+  --tablet-sidebar-width: 80px;
+  --header-height: 60px;
+  --menu-icon-size: 24px;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none; /* Will be set to flex in media queries */
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 1100;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-menu-btn i {
+  font-size: var(--menu-icon-size);
+}
+
+/* Mobile Sidebar */
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 1050;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.mobile-sidebar.active {
+  left: 0;
+}
+
+.mobile-sidebar-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.mobile-sidebar-header h3 {
+  color: var(--white);
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+.mobile-sidebar-header p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+}
+
+.mobile-sidebar-menu {
+  width: 100%;
+  max-width: 300px;
+}
+
+.mobile-sidebar-menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.mobile-sidebar-menu li {
+  margin-bottom: 15px;
+}
+
+.mobile-sidebar-menu a {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  color: var(--white);
+  text-decoration: none;
+  font-size: 1.2rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-sidebar-menu a:hover,
+.mobile-sidebar-menu a.active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+}
+
+.mobile-sidebar-menu i {
+  margin-right: 15px;
+  font-size: 1.3rem;
+  width: 24px;
+  text-align: center;
+}
+
+.mobile-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* Responsive Breakpoints */
+
+/* Large Desktops (1200px and up) */
+@media (min-width: 1200px) {
+  .sidebar {
+    width: var(--sidebar-width);
+  }
+  
+  .main-content {
+    margin-left: var(--sidebar-width);
+  }
+  
+  .mobile-menu-btn,
+  .mobile-sidebar {
+    display: none;
+  }
+}
+
+/* Desktops and Laptops (992px to 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .sidebar {
+    width: var(--tablet-sidebar-width);
+  }
+  
+  .sidebar-header h3,
+  .sidebar-menu ul li a span {
+    display: none;
+  }
+  
+  .sidebar-menu ul li a {
+    justify-content: center;
+    padding: 15px 0;
+  }
+  
+  .sidebar-menu ul li a i {
+    margin-right: 0;
+    font-size: 1.2rem;
+  }
+  
+  .main-content {
+    margin-left: var(--tablet-sidebar-width);
+  }
+  
+  .mobile-menu-btn,
+  .mobile-sidebar {
+    display: none;
+  }
+}
+
+/* Tablets (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .sidebar {
+    width: var(--tablet-sidebar-width);
+  }
+  
+  .sidebar-header h3,
+  .sidebar-menu ul li a span {
+    display: none;
+  }
+  
+  .sidebar-menu ul li a {
+    justify-content: center;
+    padding: 15px 0;
+  }
+  
+  .sidebar-menu ul li a i {
+    margin-right: 0;
+    font-size: 1.2rem;
+  }
+  
+  .main-content {
+    margin-left: var(--tablet-sidebar-width);
+  }
+  
+  .mobile-menu-btn,
+  .mobile-sidebar {
+    display: none;
+  }
+  
+  .dashboard-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile Devices (up to 767px) */
+@media (max-width: 767px) {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .admin-layout {
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    display: none;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .main-content.pushed {
+    margin-left: 0;
+  }
+  
+  .mobile-menu-btn {
+    display: flex;
+  }
+  
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 0;
+  }
+  
+  .header {
+    padding: 15px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+  }
+  
+  .header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .user-profile span {
+    display: none;
+  }
+  
+  .card {
+    padding: 15px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+  }
+  
+  .card-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .table-responsive {
+    overflow-x: auto;
+    width: 100%;
+  }
+  
+  table {
+    min-width: 600px;
+  }
+  
+  /* Fix for menu items in mobile view */
+  .mobile-sidebar-menu ul li a {
+    padding: 12px 15px;
+    font-size: 1.1rem;
+  }
+  
+  /* Fix for dashboard spacing */
+  .dashboard-cards .stat-card {
+    margin-bottom: 0;
+  }
+}
+
+/* Small Mobile Devices (up to 576px) */
+@media (max-width: 576px) {
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .admin-layout {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .header {
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .mobile-menu-btn {
+    top: 10px;
+    right: 10px;
+    display: flex !important;
+    z-index: 1100;
+  }
+  
+  .card {
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .stat-card h3 {
+    font-size: 1.3rem;
+  }
+  
+  .stat-card i {
+    font-size: 2rem;
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .main-content {
+    padding: 10px;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Fix dashboard spacing issues */
+  .dashboard-cards {
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Fix table display on small screens */
+  .table-responsive {
+    margin: 0 -10px;
+    padding: 0 10px;
+    width: calc(100% + 20px);
+  }
+  
+  /* Fix spacing in card body */
+  .card-body {
+    padding: 10px 0;
+  }
+  
+  /* Fix spacing for quick links */
+  .card-body > div {
+    margin-top: 10px;
+  }
+  
+  /* Fix mobile sidebar menu */
+  .mobile-sidebar {
+    width: 100%;
+  }
+  
+  .mobile-sidebar-menu {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 20px;
+  }
+}

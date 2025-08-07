@@ -1,0 +1,217 @@
+/* Login Page Styles */
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: var(--body-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add decorative elements */
+.login-container::before,
+.login-container::after {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  z-index: 0;
+}
+
+.login-container::before {
+  top: -100px;
+  right: -100px;
+}
+
+.login-container::after {
+  bottom: -100px;
+  left: -100px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 450px;
+  background: var(--white);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 30px;
+  transition: var(--transition);
+  animation: fadeInUp 0.8s;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-header h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--dark-color);
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-header p {
+  color: var(--secondary-color);
+  font-size: 1rem;
+}
+
+/* Loading spinner for login button */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--white);
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .login-card {
+    padding: 25px;
+    max-width: 400px;
+  }
+  
+  .login-header h2 {
+    font-size: 1.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-container {
+    padding: 15px;
+  }
+  
+  .login-card {
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .login-header h2 {
+    font-size: 1.7rem;
+  }
+  
+  .login-header p {
+    font-size: 0.9rem;
+  }
+  
+  .form-control {
+    padding: 8px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  /* Adjust modal for small screens */
+  .modal-content {
+    width: 95%;
+    margin: 15% auto;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-card {
+    padding: 15px;
+  }
+  
+  .login-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+}
+
+/* Custom checkbox styling */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--secondary-color);
+  border-radius: 4px;
+  margin-right: 8px;
+  position: relative;
+  top: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  border-color: var(--primary-color);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-size: 14px;
+  top: -2px;
+  left: 3px;
+}
+
+/* Text secondary color */
+.text-secondary {
+  color: var(--secondary-color);
+  font-size: 0.85rem;
+}

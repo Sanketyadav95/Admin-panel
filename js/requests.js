@@ -12,6 +12,7 @@ const modalStatus = document.getElementById('modalStatus');
 const userDataPreview = document.getElementById('userDataPreview');
 const approveRequestBtn = document.getElementById('approveRequestBtn');
 const rejectRequestBtn = document.getElementById('rejectRequestBtn');
+const downloadUserDataBtn = document.getElementById('downloadUserDataBtn');
 const adminEmailEl = document.getElementById('adminEmail');
 const logoutBtn = document.getElementById('logoutBtn');
 
@@ -314,6 +315,56 @@ function rejectDeleteRequest(requestId) {
   alert('Delete request rejected successfully!');
 }
 
+// Download user data
+function downloadUserData(userId) {
+  try {
+    // Get user data
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const user = users.find(u => u.id === userId);
+    
+    if (!user) {
+      alert('User data not found!');
+      return;
+    }
+    
+    // Create a formatted user data object (remove sensitive data if needed)
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      // Add any other relevant fields
+    };
+    
+    // Convert to JSON string with pretty formatting
+    const jsonData = JSON.stringify(userData, null, 2);
+    
+    // Create a blob with the data
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    
+    // Create a download link
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `user_${userId}_data.json`;
+    
+    // Trigger download
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+  } catch (error) {
+    console.error('Error downloading user data:', error);
+    alert('An error occurred while downloading the user data.');
+  }
+}
+
 // Set up event listeners
 function setupEventListeners() {
   // Tab switching
@@ -374,6 +425,12 @@ function setupEventListeners() {
     if (confirm('Are you sure you want to reject this delete request?')) {
       rejectDeleteRequest(currentRequest.id);
     }
+  });
+  
+  // Download user data from modal
+  downloadUserDataBtn.addEventListener('click', function() {
+    if (!currentRequest) return;
+    downloadUserData(currentRequest.userId);
   });
   
   // Close modal when clicking outside

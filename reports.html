@@ -6,8 +6,65 @@
   <title>Admin Panel - Reports</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
+
+<!-- Mobile Menu Button -->
+<button class="mobile-menu-btn">
+  <i class="fas fa-bars"></i>
+</button>
+
+<!-- Mobile Sidebar -->
+<div class="mobile-sidebar">
+  <button class="mobile-close-btn">
+    <i class="fas fa-times"></i>
+  </button>
+  <div class="mobile-sidebar-header">
+    <h3>Admin Panel</h3>
+    <p>Welcome, <span id="mobileAdminName">Admin</span></p>
+  </div>
+  <div class="mobile-sidebar-menu">
+    <ul>
+      <li>
+        <a href="dashboard.html" class="">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="payments.html" class="">
+          <i class="fas fa-money-bill-wave"></i> Payments
+        </a>
+      </li>
+      <li>
+        <a href="users.html" class="">
+          <i class="fas fa-users"></i> Manage Users
+        </a>
+      </li>
+      <li>
+        <a href="reports.html" class="active">
+          <i class="fas fa-chart-bar"></i> Reports
+        </a>
+      </li>
+      <li>
+        <a href="requests.html" class="">
+          <i class="fas fa-trash-alt"></i> Delete Requests
+        </a>
+      </li>
+      <li>
+        <a href="settings.html" class="">
+          <i class="fas fa-cog"></i> Settings
+        </a>
+      </li>
+      <li>
+        <a href="#" id="mobileLogoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </li>
+    </ul>
+  </div>
+</div>
+
   <div class="admin-layout">
     <!-- Sidebar Navigation -->
     <div class="sidebar">
@@ -257,5 +314,6 @@
     });
   </script>
   <script src="js/reports.js"></script>
+  <script src="js/responsive.js"></script>
 </body>
 </html>

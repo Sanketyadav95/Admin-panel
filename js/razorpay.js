@@ -58,45 +58,17 @@ function showError(message) {
   
   // Auto hide after 5 seconds
   setTimeout(() => {
-    errorAlert.style.display = 'none';
+    if (errorAlert) {
+      errorAlert.style.display = 'none';
+    }
   }, 5000);
 }
 
-// Function to show success message
-function showSuccess(message) {
-  // Create success alert if it doesn't exist
-  let successAlert = document.getElementById('razorpaySuccessAlert');
-  
-  if (!successAlert) {
-    successAlert = document.createElement('div');
-    successAlert.id = 'razorpaySuccessAlert';
-    successAlert.className = 'alert alert-success';
-    successAlert.style.position = 'fixed';
-    successAlert.style.top = '20px';
-    successAlert.style.right = '20px';
-    successAlert.style.zIndex = '9999';
-    successAlert.style.maxWidth = '400px';
-    document.body.appendChild(successAlert);
-  }
-  
-  successAlert.innerHTML = `
-    <strong>Success:</strong> ${message}
-    <button type="button" class="close" onclick="this.parentElement.style.display='none'">&times;</button>
-  `;
-  successAlert.style.display = 'block';
-  
-  // Auto hide after 5 seconds
-  setTimeout(() => {
-    successAlert.style.display = 'none';
-  }, 5000);
-}
-
-// Function to open Razorpay checkout
-function openRazorpayCheckout() {
-  // Check if Razorpay is loaded
-  if (!isRazorpayLoaded()) {
-    showError('Razorpay is not loaded yet. Please try again in a moment.');
-    loadRazorpayScript(); // Try to load it again
+// Function to show payment form
+function showPaymentForm() {
+  // Check if user is logged in
+  if (!isLoggedIn()) {
+    showError('You must be logged in to process payments.');
     return;
   }
   
@@ -232,2259 +204,489 @@ function processPaymentForm(e) {
     errorMessage += 'Please enter a valid 10-digit phone number.\n';
   }
   
+  // Display error if validation fails
   if (!isValid) {
-    const errorElement = document.getElementById('formErrorMessage');
-    errorElement.textContent = errorMessage;
-    errorElement.style.display = 'block';
+    const formErrorMessage = document.getElementById('formErrorMessage');
+    formErrorMessage.textContent = errorMessage;
+    formErrorMessage.style.display = 'block';
     return;
   }
   
-  // Show loading indicator
-  const submitBtn = document.getElementById('paymentSubmitBtn');
-  showLoading(submitBtn, 'Processing...');
+  // Hide error message if previously shown
+  const formErrorMessage = document.getElementById('formErrorMessage');
+  if (formErrorMessage) {
+    formErrorMessage.style.display = 'none';
+  }
   
-  try {
-    // Close modal
-    document.getElementById('paymentFormModal').style.display = 'none';
-    
-    // Create Razorpay options
-    const options = {
-      key: razorpayConfig.key_id,
-      amount: parseFloat(amount) * 100, // Amount in paise
-      currency: razorpayConfig.currency,
-      name: razorpayConfig.name,
-      description: description || 'Payment Collection',
-      image: razorpayConfig.image,
-      handler: function(response) {
-        handleSuccessfulPayment(response, {
-          amount: parseFloat(amount),
-          name: name,
-          email: email,
-          phone: phone,
-          description: description
-        });
-      },
-      prefill: {
+  // Show loading on submit button
+  const submitBtn = document.getElementById('paymentSubmitBtn');
+  showLoading(submitBtn, 'Opening Payment Gateway...');
+  
+  // Convert amount to paise (Razorpay requires amount in smallest currency unit)
+  const amountInPaise = Math.round(parseFloat(amount) * 100);
+  
+  // Create order ID (in a real app, this would come from your backend)
+  const orderId = 'ORD' + Date.now();
+  
+  // Configure Razorpay options
+  const options = {
+    ...razorpayConfig,
+    amount: amountInPaise,
+    order_id: orderId,
+    prefill: {
+      name: name,
+      email: email,
+      contact: phone
+    },
+    notes: {
+      description: description || 'Manual payment collection'
+    },
+    handler: function(response) {
+      // Hide loading
+      hideLoading(submitBtn);
+      
+      // Close modal
+      const modal = document.getElementById('paymentFormModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+      
+      // Process payment success
+      processPaymentSuccess(response, {
+        amount: amount,
         name: name,
         email: email,
-        contact: phone
-      },
-      theme: razorpayConfig.theme,
-      modal: {
-        ondismiss: function() {
-          hideLoading(submitBtn);
-        }
+        phone: phone,
+        description: description
+      });
+    },
+    modal: {
+      ondismiss: function() {
+        // Hide loading when Razorpay modal is dismissed
+        hideLoading(submitBtn);
       }
-    };
-    
+    }
+  };
+  
+  // Open Razorpay checkout
+  try {
     const rzp = new Razorpay(options);
-    
-    rzp.on('payment.failed', function(response) {
-      hideLoading(submitBtn);
-      showError('Payment failed: ' + response.error.description);
-    });
-    
     rzp.open();
   } catch (error) {
     hideLoading(submitBtn);
-    showError('Error creating payment: ' + (error.message || 'Please try again'));
-    console.error('Razorpay error:', error);
+    showError('Failed to open payment gateway: ' + error.message);
   }
 }
 
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  try {
-    // Get existing payments from localStorage
-    const payments = JSON.parse(localStorage.getItem('payments')) || [];
-    
-    // Create new payment object
-    const newPayment = {
-      id: 'PAY' + Math.floor(Math.random() * 10000),
-      razorpayId: response.razorpay_payment_id,
-      sender: customerData.name,
-      receiver: localStorage.getItem('adminName') || 'Admin',
-      amount: parseFloat(customerData.amount),
-      date: new Date().toISOString(),
-      status: 'success',
-      description: customerData.description,
-      customerEmail: customerData.email,
-      customerPhone: customerData.phone
-    };
-    
-    // Add new payment to array
-    payments.push(newPayment);
-    
-    // Save to localStorage
-    localStorage.setItem('payments', JSON.stringify(payments));
-    
-    // Show success message
-    showSuccess('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-    
-    // Reload page to update dashboard after a short delay
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
-  } catch (error) {
-    showError('Error saving payment data: ' + (error.message || 'Unknown error'));
-    console.error('Payment handling error:', error);
+// Process successful payment
+function processPaymentSuccess(response, paymentDetails) {
+  // In a real app, you would verify the payment with your backend here
+  // For demo purposes, we'll just show a success message and log the details
+  
+  // Create payment record
+  const paymentRecord = {
+    id: response.razorpay_payment_id,
+    order_id: response.razorpay_order_id,
+    signature: response.razorpay_signature,
+    amount: paymentDetails.amount,
+    currency: razorpayConfig.currency,
+    customer: {
+      name: paymentDetails.name,
+      email: paymentDetails.email,
+      phone: paymentDetails.phone
+    },
+    description: paymentDetails.description,
+    timestamp: new Date().toISOString(),
+    status: 'success'
+  };
+  
+  // Log payment details (in a real app, you would send this to your server)
+  console.log('Payment successful:', paymentRecord);
+  
+  // Save to local storage for demo purposes
+  savePaymentToLocalStorage(paymentRecord);
+  
+  // Show success message
+  showSuccessMessage(paymentRecord);
+  
+  // Update payments list if on payments page
+  if (typeof loadPayments === 'function') {
+    loadPayments();
   }
 }
 
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
+// Save payment to local storage
+function savePaymentToLocalStorage(paymentRecord) {
+  // Get existing payments
+  let payments = JSON.parse(localStorage.getItem('razorpayPayments') || '[]');
+  
+  // Add new payment
+  payments.push(paymentRecord);
+  
+  // Save back to local storage
+  localStorage.setItem('razorpayPayments', JSON.stringify(payments));
 }
 
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
+// Show success message
+function showSuccessMessage(paymentRecord) {
+  // Create success modal if it doesn't exist
+  let successModal = document.getElementById('paymentSuccessModal');
   
-  const loadingIndicator = document.createElement('div');
-  loadingIndicator.id = 'razorpayLoadingIndicator';
-  loadingIndicator.innerHTML = '<div class="loading-spinner"></div> Loading payment gateway...';
-  loadingIndicator.style.position = 'fixed';
-  loadingIndicator.style.top = '10px';
-  loadingIndicator.style.right = '10px';
-  loadingIndicator.style.background = 'rgba(255, 255, 255, 0.9)';
-  loadingIndicator.style.padding = '10px';
-  loadingIndicator.style.borderRadius = '4px';
-  loadingIndicator.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
-  loadingIndicator.style.zIndex = '9999';
-  document.body.appendChild(loadingIndicator);
+  if (successModal) {
+    // Update existing modal content
+    updateSuccessModalContent(successModal, paymentRecord);
+  } else {
+    // Create new modal
+    createSuccessModal(paymentRecord);
+  }
   
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
+  // Show the modal
+  successModal = document.getElementById('paymentSuccessModal');
+  if (successModal) {
+    successModal.style.display = 'block';
+  }
+}
+
+// Create success modal
+function createSuccessModal(paymentRecord) {
+  // Create modal element
+  const modal = document.createElement('div');
+  modal.id = 'paymentSuccessModal';
+  modal.className = 'modal';
+  modal.style.display = 'block';
   
-  script.onload = function() {
-    // Remove loading indicator when script is loaded
-    if (loadingIndicator) {
-      loadingIndicator.remove();
+  // Create modal content
+  const modalContent = document.createElement('div');
+  modalContent.className = 'modal-content';
+  
+  // Create modal header
+  const modalHeader = document.createElement('div');
+  modalHeader.className = 'modal-header success-header';
+  modalHeader.innerHTML = `
+    <h3><i class="fas fa-check-circle"></i> Payment Successful</h3>
+    <span class="close" id="closeSuccessModal">&times;</span>
+  `;
+  
+  // Create modal body
+  const modalBody = document.createElement('div');
+  modalBody.className = 'modal-body';
+  modalBody.innerHTML = getSuccessModalBodyHTML(paymentRecord);
+  
+  // Append modal parts
+  modalContent.appendChild(modalHeader);
+  modalContent.appendChild(modalBody);
+  modal.appendChild(modalContent);
+  
+  // Append modal to body
+  document.body.appendChild(modal);
+  
+  // Add event listeners
+  document.getElementById('closeSuccessModal').addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+  
+  window.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.style.display = 'none';
     }
-  };
+  });
   
-  script.onerror = function() {
-    // Show error and remove loading indicator
-    if (loadingIndicator) {
-      loadingIndicator.remove();
-    }
-    showError('Failed to load payment gateway. Please check your internet connection and try again.');
-  };
-  
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
+  // Add print receipt event listener
+  const printBtn = document.getElementById('printReceiptBtn');
+  if (printBtn) {
+    printBtn.addEventListener('click', function() {
+      printReceipt(paymentRecord);
+    });
   }
 }
 
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
+// Update success modal content
+function updateSuccessModalContent(modal, paymentRecord) {
+  // Update modal body
+  const modalBody = modal.querySelector('.modal-body');
+  if (modalBody) {
+    modalBody.innerHTML = getSuccessModalBodyHTML(paymentRecord);
+  }
   
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
+  // Re-add print receipt event listener
+  const printBtn = document.getElementById('printReceiptBtn');
+  if (printBtn) {
+    printBtn.addEventListener('click', function() {
+      printReceipt(paymentRecord);
+    });
+  }
+}
+
+// Get success modal body HTML
+function getSuccessModalBodyHTML(paymentRecord) {
+  const formattedAmount = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: razorpayConfig.currency
+  }).format(paymentRecord.amount);
+  
+  const timestamp = new Date(paymentRecord.timestamp);
+  const formattedDate = timestamp.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  const formattedTime = timestamp.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  return `
+    <div class="success-message">
+      <div class="success-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <p class="success-text">Your payment has been processed successfully!</p>
+    </div>
+    
+    <div class="receipt">
+      <div class="receipt-header">
+        <h4>Payment Receipt</h4>
+        <p class="receipt-date">${formattedDate} at ${formattedTime}</p>
+      </div>
+      
+      <div class="receipt-details">
+        <div class="receipt-row">
+          <span class="receipt-label">Payment ID:</span>
+          <span class="receipt-value">${paymentRecord.id}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Amount:</span>
+          <span class="receipt-value receipt-amount">${formattedAmount}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Customer:</span>
+          <span class="receipt-value">${paymentRecord.customer.name}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Email:</span>
+          <span class="receipt-value">${paymentRecord.customer.email}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Phone:</span>
+          <span class="receipt-value">${paymentRecord.customer.phone}</span>
+        </div>
+        ${paymentRecord.description ? `
+        <div class="receipt-row">
+          <span class="receipt-label">Description:</span>
+          <span class="receipt-value">${paymentRecord.description}</span>
+        </div>
+        ` : ''}
+        <div class="receipt-row">
+          <span class="receipt-label">Status:</span>
+          <span class="receipt-value receipt-status">Successful</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="receipt-actions">
+      <button id="printReceiptBtn" class="btn btn-outline-primary">
+        <i class="fas fa-print"></i> Print Receipt
+      </button>
+    </div>
+  `;
+}
+
+// Print receipt
+function printReceipt(paymentRecord) {
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank');
+  
+  // Get formatted values
+  const formattedAmount = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: razorpayConfig.currency
+  }).format(paymentRecord.amount);
+  
+  const timestamp = new Date(paymentRecord.timestamp);
+  const formattedDate = timestamp.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  const formattedTime = timestamp.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  // Write the receipt HTML to the new window
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payment Receipt - ${paymentRecord.id}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          color: #333;
+        }
+        
+        .receipt-container {
+          max-width: 800px;
+          margin: 0 auto;
+          border: 1px solid #ddd;
+          padding: 20px;
+        }
+        
+        .receipt-header {
+          text-align: center;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #eee;
+          margin-bottom: 20px;
+        }
+        
+        .receipt-header h1 {
+          color: #3498db;
+          margin-bottom: 5px;
+        }
+        
+        .receipt-header p {
+          color: #777;
+          margin-top: 0;
+        }
+        
+        .receipt-details {
+          margin-bottom: 30px;
+        }
+        
+        .receipt-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 0;
+          border-bottom: 1px solid #eee;
+        }
+        
+        .receipt-label {
+          font-weight: bold;
+          color: #555;
+        }
+        
+        .receipt-amount {
+          font-weight: bold;
+          color: #3498db;
+          font-size: 1.1em;
+        }
+        
+        .receipt-status {
+          color: #27ae60;
+          font-weight: bold;
+        }
+        
+        .receipt-footer {
+          text-align: center;
+          margin-top: 30px;
+          color: #777;
+          font-size: 0.9em;
+        }
+        
+        @media print {
+          body {
+            padding: 0;
+          }
+          
+          .receipt-container {
+            border: none;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="receipt-container">
+        <div class="receipt-header">
+          <h1>Payment Receipt</h1>
+          <p>${formattedDate} at ${formattedTime}</p>
+        </div>
+        
+        <div class="receipt-details">
+          <div class="receipt-row">
+            <span class="receipt-label">Payment ID:</span>
+            <span>${paymentRecord.id}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-label">Order ID:</span>
+            <span>${paymentRecord.order_id}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-label">Amount:</span>
+            <span class="receipt-amount">${formattedAmount}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-label">Customer:</span>
+            <span>${paymentRecord.customer.name}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-label">Email:</span>
+            <span>${paymentRecord.customer.email}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="receipt-label">Phone:</span>
+            <span>${paymentRecord.customer.phone}</span>
+          </div>
+          ${paymentRecord.description ? `
+          <div class="receipt-row">
+            <span class="receipt-label">Description:</span>
+            <span>${paymentRecord.description}</span>
+          </div>
+          ` : ''}
+          <div class="receipt-row">
+            <span class="receipt-label">Status:</span>
+            <span class="receipt-status">Successful</span>
+          </div>
+        </div>
+        
+        <div class="receipt-footer">
+          <p>Thank you for your payment!</p>
+          <p>This is a computer-generated receipt and does not require a signature.</p>
+        </div>
+      </div>
+      
+      <script>
+        // Auto print
+        window.onload = function() {
+          window.print();
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  
+  // Close the document
+  printWindow.document.close();
+}
+
+// Check if user is logged in
+function isLoggedIn() {
+  // In a real app, you would check session/token validity
+  // For demo purposes, we'll just check if there's a user in local storage
+  const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+  return !!user;
+}
+
+// Initialize Razorpay
+function initRazorpay() {
+  // Add Razorpay script if not already added
+  if (!document.getElementById('razorpay-js')) {
+    const script = document.createElement('script');
+    script.id = 'razorpay-js';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+  }
+  
+  // Add event listeners to payment buttons
+  const paymentButtons = document.querySelectorAll('.payment-btn, .razorpay-btn');
+  paymentButtons.forEach(button => {
+    button.addEventListener('click', showPaymentForm);
   });
 }
 
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.25);
-}
-
-.form-group.has-error .form-control {
-  border-color: var(--danger-color);
-}
-
-.form-group.has-error .error-message {
-  color: var(--danger-color);
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-/* Confirmation Dialog */
-.confirm-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.confirm-dialog-content {
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-}
-
-.confirm-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.confirm-dialog-actions button {
-  margin-left: 10px;
-}
-  
-  // Handle payment failure
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + response.error.description);
-  });
-}
-
-// Handle successful payment
-function handleSuccessfulPayment(response, customerData) {
-  // Get existing payments from localStorage
-  const payments = JSON.parse(localStorage.getItem('payments')) || [];
-  
-  // Create new payment object
-  const newPayment = {
-    id: 'PAY' + Math.floor(Math.random() * 10000),
-    razorpayId: response.razorpay_payment_id,
-    sender: customerData.name,
-    receiver: localStorage.getItem('adminName') || 'Admin',
-    amount: parseFloat(customerData.amount),
-    date: new Date().toISOString(),
-    status: 'success',
-    description: customerData.description,
-    customerEmail: customerData.email,
-    customerPhone: customerData.phone
-  };
-  
-  // Add new payment to array
-  payments.push(newPayment);
-  
-  // Save to localStorage
-  localStorage.setItem('payments', JSON.stringify(payments));
-  
-  // Show success message
-  alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-  
-  // Reload page to update dashboard
-  window.location.reload();
-}
-
-// Check if Razorpay script is loaded
-function isRazorpayLoaded() {
-  return typeof Razorpay !== 'undefined';
-}
-
-// Load Razorpay script if not already loaded
-function loadRazorpayScript() {
-  if (isRazorpayLoaded()) return;
-  
-  const script = document.createElement('script');
-  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-  script.async = true;
-  document.body.appendChild(script);
-}
-
-// Initialize Razorpay when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  loadRazorpayScript();
-});
-
-/* Loading Indicators */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.btn-loading .loading-spinner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -10px;
-  margin-top: -10px;
-}
-
-/* Tooltips */
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: var(--dark-color);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -60px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Improved Mobile Responsiveness */
-@media (max-width: 576px) {
-  .login-card {
-    padding: 20px;
-    margin: 0 15px;
-  }
-  
-  .card {
-    padding: 15px;
-  }
-  
-  .btn {
-    width: 100%;
-    margin-bottom: 5px;
-  }
-  
-  .table-responsive {
-    margin: 0 -15px;
-    width: calc(100% + 30px);
-  }
-  
-  .header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tab-link {
-    width: 100%;
-    text-align: center;
-  }
-}
-
-/* Improved Form Styles */
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initRazorpay);
